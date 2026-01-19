@@ -1,0 +1,2904 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport"/>
+<link rel="manifest" href="manifest.json">
+<title>Moxie Books • 离线小册 (v1.3 <SafeButtons>) </title>
+<style>
+:root{
+  --bg:#fff;
+  --fg:#222;
+  --muted:#666;
+  --primary:#ff7aa8; /* 粉 */
+  --card:#ffffff;
+  --card-border:#eee;
+  --chip-bg:#ffe5ef;
+  --chip-fg:#b03b66;
+  --shadow:0 6px 20px rgba(0,0,0,.06);
+  --radius:14px;
+}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+/* 顶栏 */
+.header{position:sticky;top:0;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--card-border);z-index:5}
+.header .row{display:flex;align-items:center;gap:10px;padding:10px 12px;max-width:980px;margin:0 auto;}
+.header .title{font-weight:700;font-size:18px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.btn{appearance:none;border:1px solid var(--card-border);background:#fff;padding:8px 12px;border-radius:999px;box-shadow:var(--shadow);cursor:pointer;}
+.iconbtn{border:none;background:transparent;padding:8px;border-radius:10px;}
+.badge{font-size:12px;color:#fff;background:var(--primary);padding:2px 8px;border-radius:999px;margin-left:6px}
+/* 书架网格 */
+.container{max-width:980px;margin:0 auto;padding:12px;display:block}
+.grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(3, minmax(0,1fr));}}
+/* 正文字块背景 */
+.rich-editor {
+  background: rgba(255,255,255,0.6);
+  border-radius: 12px;
+  padding: 10px;
+}
+/* ⭐ 被置顶的标签样式（去掉星号） */
+.tag-pinned {
+  position: relative;
+  background: #ffeef5 !important;
+  border-color: #ff84b3 !important;
+  color: #ff5c9a !important;
+}
+.tag-pinned::after {
+  content: none !important;
+}
+/* 只隐藏标签条上的那颗⭐，缩略图上的星星不动 */
+#tagBar .star {
+  display: none !important;
+}
+
+/* ⭐ 新增：专门给“页缩略图”用的缩放网格，支持 更小/ 超小 /小 / 中 / 大 */
+.grid.thumb-grid{grid-template-columns:repeat(2, minmax(0,1fr));}
+
+/* 小：一次多放几张（3列） */
+.grid.thumb-grid.thumb-s{
+  grid-template-columns:repeat(3, minmax(0,1fr)) !important;
+}
+
+/* 中：默认（2列） */
+.grid.thumb-grid.thumb-m{
+  grid-template-columns:repeat(2, minmax(0,1fr)) !important;
+}
+
+/* 大：一列大卡片 */
+.grid.thumb-grid.thumb-l{
+  grid-template-columns:repeat(1, minmax(0,1fr)) !important;
+}
+/* 4 列：超小卡片 */
+.grid.thumb-grid.thumb-4c{
+  grid-template-columns:repeat(4, minmax(0,1fr)) !important;
+}
+
+/* 5 列：更小，一屏塞更多 */
+.grid.thumb-grid.thumb-5c{
+  grid-template-columns:repeat(5, minmax(0,1fr)) !important;
+}
+
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;min-height:160px;}
+.card .cover{aspect-ratio:16/10;background:#f6f6f6 center/cover no-repeat;position:relative}
+.card .cover .label{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:2px 6px;border-radius:999px}
+.card .cover .card-menu-btn{
+  position:absolute;
+  top:8px;
+  right:8px;
+  background:rgba(0,0,0,.55);
+  color:#fff;
+  border:none;
+  border-radius:999px;
+  padding:2px 8px;
+  font-size:14px;
+  cursor:pointer;
+}
+.card .body{padding:10px 12px}
+.card .name{font-weight:700}
+.card .sub{color:var(--muted);font-size:12px;margin-top:4px}
+.row{display:flex;gap:8px;align-items:center}
+.spacer{flex:1}
+/* 页缩略图网格 */
+.thumb .img.font-thumb{display:flex;align-items:flex-start;justify-content:flex-start;padding:8px;box-sizing:border-box;}
+.thumb .img.font-thumb .font-sample{font-size:18px;line-height:1.4;white-space:normal;word-break:break-all;overflow:auto;text-overflow:clip;}
+.thumb{border-radius:10px;border:1px solid var(--card-border);overflow:hidden;background:#fafafa;position:relative}
+.thumb .img{aspect-ratio:1/1;background:#eee center/cover no-repeat}
+.thumb .meta{padding:8px 10px}
+.star{position:absolute;right:8px;top:8px;background:rgba(255,255,255,.8);border:1px solid var(--card-border);border-radius:999px;padding:6px;box-shadow:var(--shadow)}
+.star.on{background:gold;border-color:#e0c000}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.chip{background:var(--chip-bg);color:var(--chip-fg);border-radius:999px;padding:2px 8px;font-size:12px}
+/* 标签筛选条：顶部那一排可左右滑动的小按钮 */
+.tag-row{
+  margin-bottom:8px;
+  overflow-x:auto;
+  flex-wrap:nowrap;
+}
+.tag-row::-webkit-scrollbar{display:none;}
+
+.tag-btn{
+  white-space:nowrap;
+  font-size:12px;
+  padding:4px 10px;
+}
+
+/* 被选中的标签按钮稍微亮一点 */
+.tag-btn.tag-on{
+  filter:brightness(1.08);
+  box-shadow:0 0 0 1px rgba(0,0,0,.06);
+}
+/* 详情页 */
+.detail{display:flex;flex-direction:column;gap:10px}
+.detail .imgbox{
+    background:#000;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    border-radius:12px;
+    overflow:hidden;
+    position:relative;   /* 新增这一行，让里面的箭头可以绝对定位 */
+}
+/* 文字页 / 图文混排页：把上面的大图区域藏掉，只用下面的正文 */
+.detail[data-layout="note"] .imgbox,
+.detail[data-layout="rich"] .imgbox{
+  display:none;
+}
+.detail img{max-width:100%;height:auto;display:block}
+.field{display:flex;flex-direction:column;gap:6px}
+.input, textarea{width:100%;padding:10px 12px;border:1px solid var(--card-border);border-radius:10px;background:#fff;box-sizing:border-box}
+small.muted{color:var(--muted)}
+.toolbar{position:sticky;bottom:10px;display:flex;gap:10px;justify-content:center;margin:10px 0}
+/* 默认显示（主页用） */
+.fab{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  border-radius:999px;
+  width:56px;
+  height:56px;
+  display:flex;              /* 改回显示 */
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  box-shadow:var(--shadow);
+  cursor:pointer;
+  z-index:999;
+}
+
+/* 详情页隐藏 */
+body.detail .fab{
+  display:none !important;
+}
+.page-nav{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  border:1px solid var(--card-border);
+  background:rgba(255,255,255,.85);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+}
+.page-nav.left{ left:8px; }
+.page-nav.right{ right:8px; }
+.page-nav:disabled{
+  opacity:.4;
+  cursor:default;
+}
+/* 搜索结果列表 */
+.list .item{display:flex;gap:10px;padding:10px;border-bottom:1px solid var(--card-border)}
+.item .mini{width:64px;height:64px;background:#eee center/cover no-repeat;border-radius:8px;border:1px solid var(--card-border)}
+.item .txt{flex:1}
+.item .t{font-weight:700}
+.hl{background:linear-gradient(transparent 20%, #fff0a8 20%, #fff0a8 80%, transparent 80%);}
+/* 主题：粉 / 蓝 / 白/ 黑 */
+/* 粉·梦糖 */
+.theme-pink {
+  --primary:#ff7aa8;
+  --bg:#fff;
+  --card:#fff;
+  --fg:#333;
+  --chip-bg:#ffe5ef;
+  --chip-fg:#b03b66;
+}
+
+/* 蓝·清风 */
+.theme-blue {
+  --primary:#a9d8ff;
+  --bg:#fafdff;
+  --card:#ffffff;
+  --fg:#2b3e57;
+  --chip-bg:#e8f4ff;
+  --chip-fg:#3a6be0;
+}
+
+/* 白·极简 */
+.theme-white {
+  --primary:#bbb;
+  --bg:#ffffff;          /* 真·纯白底 */
+  --card:#ffffff;
+  --fg:#444;
+  --chip-bg:#f9f9f9;
+  --chip-fg:#666;
+}
+
+/* 黑·夜幕 */
+.theme-dark {
+  --primary:#444;        /* 按钮深灰，不粉 */
+  --bg:transparent;      /* 保留底图！不要黑底 */
+  --card:#ffffff;   /* 卡片保持白底 */
+  --fg:#444;
+  --chip-bg:#333;
+  --chip-fg:#ddd;
+}
+/* 黑色主题下加号按钮改为纯黑底白字 */
+body.theme-dark .fab {
+  background: #000 !important;
+  color: #fff !important;
+}
+/* 白色主题下：顶栏按钮保持白色，不要变成灰块 */
+body.theme-white .header .btn {
+  background:#fff;
+  color:#444;
+  border:1px solid var(--card-border);
+}
+
+/* 让白色主题真正纯白，按钮不灰 */
+body.theme-white .header .btn {
+  background: #fff !important;
+  color: #444 !important;
+  border: 1px solid #ddd !important;
+}
+
+
+/* === 白色主题下，加号按钮改为纯白 === */
+body.theme-white .fab {
+  background: #fff !important;
+  color: #222 !important;
+  border: 1px solid #ddd !important;
+}
+body.theme-dark .header .title {
+  color: #222 !important;           /* 顶部标题保持深色 */
+}
+
+/* === 搜索结果所有文字强制黑色 === */
+#searchResultInline,
+#searchResultInline *,
+.list .item *,
+.list .item .txt,
+.list .item .sub {
+  color: #000 !important;
+}
+/* 顶栏按钮自动跟随主题色 */
+.header .btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 6px 12px;
+    margin-left: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.header .btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+
+/* 去掉丑的“设首页背景”灰框 */
+#btnTheme, #btnFav, #btnSearch {
+    box-shadow: 0 0 5px rgba(255,255,255,0.3);
+}
+/* 状态点 */
+.statusdot{width:10px;height:10px;border-radius:50%;background:#bbb;display:inline-block;margin-left:6px}
+.statusdot.ok{background:#16c60c}
+/* 笔记里的小缩略图样式 */
+.thumbnail{
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  cursor: pointer;
+}
+/* 全屏图片预览蒙版 */
+.img-preview-mask{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.img-preview-mask img{
+  max-width: 96vw;
+  max-height: 96vh;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+
+/* 鼠标/手指按住时微微放大一点 */
+.thumbnail:hover{
+  transform: scale(1.05);
+  transition: 0.2s;
+}
+/* 富文本图文混排编辑器 */
+.rich-editor{
+  min-height:60vh;       /* 原来是 260px，改成占屏幕 60% 高 */
+  max-height:none;
+  overflow-y:auto;
+  word-break:break-word;
+  position:relative;
+}
+
+/* 正文里的小图样式（默认当贴纸用） */
+.inline-img{
+  position:relative;   /* ⭐ 记得加这一行，让 left/top 生效 */
+  max-width:100%;
+  width:60%;
+  height:auto;
+  display:block;
+  margin:10px auto;
+  border-radius:12px;
+  cursor:pointer;
+}
+/* —— v1.3 额外：顶栏内联面板 —— */
+#inlineBars{padding-top:0}
+#searchBar,#themeBar{display:none;padding:8px 0}
+</style>
+</head>
+<body>
+<div class="header">
+<div class="row">
+<button class="iconbtn" id="btnBack" style="display:none" title="返回">⟵</button>
+<div class="title" id="title">Moxie Books</div>
+<!-- 新：小齿轮按钮，只显示在顶栏 -->
+<button class="btn" id="btnTools" onclick="toggleTools()">⚙ 功能</button>
+<!-- 旧的四个按钮保留但隐藏，只给脚本用，不占地方 -->
+<button class="btn" id="btnSearch" onclick="onSearchBtn()" style="display:none">🔎 搜索</button>
+<button class="btn" id="btnFav" onclick="onFavBtn()" style="display:none">★ 收藏</button>
+<button class="btn" id="btnTheme" onclick="onThemeBtn()" style="display:none">🎨 主题</button>
+<button class="btn" id="btnSetHomeBg" style="display:none">🌈 设首页背景</button>
+<span class="statusdot" id="statusDot" title="保存状态"></span>
+</div>
+</div>
+<!-- 新：顶栏下面一排工具键（默认收起） -->
+<div class="container" id="toolsBar" style="display:none">
+<div class="row" style="gap:8px; flex-wrap:wrap">
+<button class="btn" onclick="onSearchBtn()">🔎 搜索</button>
+<button class="btn" onclick="onFavBtn()">★ 收藏</button>
+<button class="btn" onclick="onThemeBtn()">🎨 主题</button>
+<button class="btn" onclick="document.getElementById('btnSetHomeBg').click()">🌈 设首页背景</button>
+<!-- GitHub 云备份入口：点击只打开下面那个小面板 -->
+<button class="btn" onclick="openGithubPanel()">☁ GitHub 备份</button>
+<!-- 本地导入 / 导出 JSON 备份 -->
+<button class="btn" onclick="exportBackup()">💾 导出到文件</button>
+<button class="btn" onclick="importBackup()">📥 从文件导入</button>
+</div>
+</div>
+<!-- 顶栏下的内联面板（搜索框 & 主题选择） -->
+<div class="container" id="inlineBars">
+<div id="searchBar">
+<input class="input" id="searchInputInline" placeholder='搜索标题/标签/正文/URL；支持 tag:圆体 url:kiwi "整句" ★'/>
+<div class="list" id="searchResultInline"></div>
+</div>
+<div id="themeBar">
+<div class="row">
+<button class="btn" data-theme-inline="pink">粉 · 梦糖</button>
+<button class="btn" data-theme-inline="blue">蓝 · 清风</button>
+<button class="btn" data-theme-inline="white">白 · 极简</button>
+<button class="btn" data-theme-inline="dark">黑 · 夜幕</button>
+</div>
+</div>
+</div>
+<!-- GitHub 备份面板 -->
+<div id="ghPanelMask" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);
+            z-index:999;align-items:center;justify-content:center;">
+<div style="width:min(92vw,420px);background:#fff;border-radius:16px;
+              padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.18);">
+<div class="row" style="margin-bottom:10px;">
+<div style="font-weight:600;">☁ GitHub 云备份</div>
+<div class="spacer"></div>
+<button class="iconbtn" onclick="closeGithubPanel()" type="button">✕</button>
+</div>
+<div class="field">
+<label>Token</label>
+<input class="input" id="ghToken" placeholder="GitHub Personal Access Token"/>
+</div>
+<div class="field">
+<label>仓库拥有者（owner）</label>
+<input class="input" id="ghOwner" placeholder="例如：QYYaml"/>
+</div>
+<div class="field">
+<label>仓库名（repo）</label>
+<input class="input" id="ghRepo" placeholder="例如：moxie-books-backup"/>
+</div>
+<div class="field">
+<label>文件路径（path）</label>
+<input class="input" id="ghPath" placeholder="例如：moxie-diary.json"/>
+<small class="muted">一个仓库里放一份总备份文件就够了。</small>
+</div>
+<!-- ✅ 自动备份频率：注意它必须在这里，不能在 <script> 里 -->
+<div class="field">
+<label>自动备份频率</label>
+<select class="input" id="ghInterval" onchange="onGhIntervalChange()">
+<option value="10m">每 10 分钟（默认）</option>
+<option value="1h">每 1 小时</option>
+<option value="3h">每 3 小时</option>
+<option value="1d">每天一次</option>
+</select>
+</div>
+<label style="font-size:13px;display:flex;align-items:center;gap:6px;
+                  margin:8px 0 12px;">
+<input id="ghAuto" onchange="onGhAutoChange()" type="checkbox"/>
+      自动在你编辑后隔一段时间备份到 GitHub
+    </label>
+<div class="row" style="justify-content:flex-end;margin-top:10px;gap:8px;">
+<button class="btn" onclick="ghRestoreBackup()" type="button">⬇ 从 GitHub 恢复</button>
+<button class="btn" onclick="ghUploadBackup(false)" type="button">⬆ 立即备份</button>
+</div>
+</div>
+</div>
+<div class="container" id="view"></div>
+<button class="fab" id="fab" onclick="onFabBtn()">＋</button>
+<!-- 新建 / 编辑专辑弹窗 -->
+<div id="dlgNewAlbum" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:99;align-items:center;justify-content:center;">
+<div style="width:min(92vw,420px);background:#fff;border-radius:16px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.15)">
+<h3 id="dlgAlbTitle" style="margin:0 0 12px">新建专辑</h3>
+<label>名称：</label>
+<input id="dlgAlbName" placeholder="给专辑起个名字" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;margin:6px 0 12px"/>
+<!-- 类型改成可自定义输入 -->
+<div style="margin-bottom:14px">
+<div style="font-size:14px;margin-bottom:4px;">类型标签：</div>
+<input id="dlgAlbType" placeholder="例如：文章本 / 字体专辑 / 链接本…" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box;"/>
+<!-- 快速填入的小按钮，不想用就无视 -->
+<div style="margin-top:6px;font-size:12px;color:#999;display:flex;gap:6px;flex-wrap:wrap;">
+<span>快速填入：</span>
+<button onclick="quickAlbType('字体专辑')" style="padding:2px 8px;border:1px solid #eee;border-radius:999px;background:#f9f9f9;font-size:12px;" type="button">字体专辑</button>
+<button onclick="quickAlbType('文章本')" style="padding:2px 8px;border:1px solid #eee;border-radius:999px;background:#f9f9f9;font-size:12px;" type="button">文章本</button>
+<button onclick="quickAlbType('网址本')" style="padding:2px 8px;border:1px solid #eee;border-radius:999px;background:#f9f9f9;font-size:12px;" type="button">网址本</button>
+</div>
+</div>
+<div style="font-size:12px;color:#777;margin-bottom:14px">
+      小提示：如果这是用来存链接的专辑，可以在每一页的「URL」输入框里，一行一条记录链接～
+    </div>
+<div style="display:flex;gap:10px;justify-content:flex-end;align-items:center">
+<!-- 编辑模式下才会显示 -->
+<button id="dlgDelete" onclick="onDeleteAlbum()" style="margin-right:auto;display:none;padding:6px 10px;border:1px solid #f5b5b5;border-radius:10px;background:#fff5f5;color:#c00;font-size:13px">
+        删除专辑
+      </button>
+<button id="dlgCancel" onclick="onNewAlbumCancel()" style="padding:8px 12px;border:1px solid #ddd;border-radius:10px;background:#fff">
+        取消
+      </button>
+<button id="dlgOk" onclick="onNewAlbumOk()" style="padding:8px 14px;border:none;border-radius:10px;background:#6b8cff;color:#fff">
+        确认
+      </button>
+</div>
+
+<style>
+.reading .detail-toolbar,
+.reading .detail-header{display:none!important;}
+.reading .detail-view{padding-top:12px;}
+</style>
+
+<script>
+// === 通用保存修复：一/二版本文字输入即时保存 ===
+document.addEventListener('input', (e)=>{
+  const el = e.target;
+  if (!el) return;
+  if (el.matches('textarea, .note-editor')){
+    try{
+      const alb = db.albums.find(a=>a.id===current.albumId);
+      const page = alb?.pages.find(p=>p.id===current.pageId);
+      if (!page) return;
+      page.note = el.value ?? el.innerText ?? '';
+      page.updated = Date.now();
+      autosave();
+    }catch(err){}
+  }
+});
+</script>
+<style>
+:root{
+  --bg:#fff;
+  --fg:#222;
+  --muted:#666;
+  --primary:#ff7aa8; /* 粉 */
+  --card:#ffffff;
+  --card-border:#eee;
+  --chip-bg:#ffe5ef;
+  --chip-fg:#b03b66;
+  --shadow:0 6px 20px rgba(0,0,0,.06);
+  --radius:14px;
+}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+/* 顶栏 */
+.header{position:sticky;top:0;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--card-border);z-index:5}
+.header .row{display:flex;align-items:center;gap:10px;padding:10px 12px;max-width:980px;margin:0 auto;}
+.header .title{font-weight:700;font-size:18px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.btn{appearance:none;border:1px solid var(--card-border);background:#fff;padding:8px 12px;border-radius:999px;box-shadow:var(--shadow);cursor:pointer;}
+.iconbtn{border:none;background:transparent;padding:8px;border-radius:10px;}
+.badge{font-size:12px;color:#fff;background:var(--primary);padding:2px 8px;border-radius:999px;margin-left:6px}
+/* 书架网格 */
+.container{max-width:980px;margin:0 auto;padding:12px;display:block}
+.grid{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(3, minmax(0,1fr));}}
+/* 正文字块背景 */
+.rich-editor {
+  background: rgba(255,255,255,0.6);
+  border-radius: 12px;
+  padding: 10px;
+}
+/* ⭐ 被置顶的标签样式（去掉星号） */
+.tag-pinned {
+  position: relative;
+  background: #ffeef5 !important;
+  border-color: #ff84b3 !important;
+  color: #ff5c9a !important;
+}
+.tag-pinned::after {
+  content: none !important;
+}
+/* 只隐藏标签条上的那颗⭐，缩略图上的星星不动 */
+#tagBar .star {
+  display: none !important;
+}
+
+/* ⭐ 新增：专门给“页缩略图”用的缩放网格，支持 更小/ 超小 /小 / 中 / 大 */
+.grid.thumb-grid{grid-template-columns:repeat(2, minmax(0,1fr));}
+
+/* 小：一次多放几张（3列） */
+.grid.thumb-grid.thumb-s{
+  grid-template-columns:repeat(3, minmax(0,1fr)) !important;
+}
+
+/* 中：默认（2列） */
+.grid.thumb-grid.thumb-m{
+  grid-template-columns:repeat(2, minmax(0,1fr)) !important;
+}
+
+/* 大：一列大卡片 */
+.grid.thumb-grid.thumb-l{
+  grid-template-columns:repeat(1, minmax(0,1fr)) !important;
+}
+/* 4 列：超小卡片 */
+.grid.thumb-grid.thumb-4c{
+  grid-template-columns:repeat(4, minmax(0,1fr)) !important;
+}
+
+/* 5 列：更小，一屏塞更多 */
+.grid.thumb-grid.thumb-5c{
+  grid-template-columns:repeat(5, minmax(0,1fr)) !important;
+}
+
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;min-height:160px;}
+.card .cover{aspect-ratio:16/10;background:#f6f6f6 center/cover no-repeat;position:relative}
+.card .cover .label{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:2px 6px;border-radius:999px}
+.card .cover .card-menu-btn{
+  position:absolute;
+  top:8px;
+  right:8px;
+  background:rgba(0,0,0,.55);
+  color:#fff;
+  border:none;
+  border-radius:999px;
+  padding:2px 8px;
+  font-size:14px;
+  cursor:pointer;
+}
+.card .body{padding:10px 12px}
+.card .name{font-weight:700}
+.card .sub{color:var(--muted);font-size:12px;margin-top:4px}
+.row{display:flex;gap:8px;align-items:center}
+.spacer{flex:1}
+/* 页缩略图网格 */
+.thumb{border-radius:10px;border:1px solid var(--card-border);overflow:hidden;background:#fafafa;position:relative}
+.thumb .img{aspect-ratio:1/1;background:#eee center/cover no-repeat}
+.thumb .meta{padding:8px 10px}
+.star{position:absolute;right:8px;top:8px;background:rgba(255,255,255,.8);border:1px solid var(--card-border);border-radius:999px;padding:6px;box-shadow:var(--shadow)}
+.star.on{background:gold;border-color:#e0c000}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.chip{background:var(--chip-bg);color:var(--chip-fg);border-radius:999px;padding:2px 8px;font-size:12px}
+/* 标签筛选条：顶部那一排可左右滑动的小按钮 */
+.tag-row{
+  margin-bottom:8px;
+  overflow-x:auto;
+  flex-wrap:nowrap;
+}
+.tag-row::-webkit-scrollbar{display:none;}
+
+.tag-btn{
+  white-space:nowrap;
+  font-size:12px;
+  padding:4px 10px;
+}
+
+/* 被选中的标签按钮稍微亮一点 */
+.tag-btn.tag-on{
+  filter:brightness(1.08);
+  box-shadow:0 0 0 1px rgba(0,0,0,.06);
+}
+/* 详情页 */
+.detail{display:flex;flex-direction:column;gap:10px}
+.detail .imgbox{
+    background:#000;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    border-radius:12px;
+    overflow:hidden;
+    position:relative;   /* 新增这一行，让里面的箭头可以绝对定位 */
+}
+/* 文字页 / 图文混排页：把上面的大图区域藏掉，只用下面的正文 */
+.detail[data-layout="note"] .imgbox,
+.detail[data-layout="rich"] .imgbox{
+  display:none;
+}
+/* 图文混排专用按钮：只有 rich 布局显示 */
+.detail[data-layout="image"] #btnInsertImg,
+.detail[data-layout="note"]  #btnInsertImg,
+.detail[data-layout="image"] #btnToggleImgEdit,
+.detail[data-layout="note"]  #btnToggleImgEdit,
+.detail[data-layout="image"] #btnResizeMode,
+.detail[data-layout="note"]  #btnResizeMode,
+.detail[data-layout="image"] #btnMoveMode,
+.detail[data-layout="note"]  #btnMoveMode{
+  display:none !important;
+}
+.detail img{max-width:100%;height:auto;display:block}
+.field{display:flex;flex-direction:column;gap:6px}
+.input, textarea{width:100%;padding:10px 12px;border:1px solid var(--card-border);border-radius:10px;background:#fff;box-sizing:border-box}
+small.muted{color:var(--muted)}
+.toolbar{position:sticky;bottom:10px;display:flex;gap:10px;justify-content:center;margin:10px 0}
+/* 默认显示（主页用） */
+.fab{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  border-radius:999px;
+  width:56px;
+  height:56px;
+  display:flex;              /* 改回显示 */
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  box-shadow:var(--shadow);
+  cursor:pointer;
+  z-index:999;
+}
+
+/* 详情页隐藏 */
+body.detail .fab{
+  display:none !important;
+}
+.page-nav{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  border:1px solid var(--card-border);
+  background:rgba(255,255,255,.85);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+}
+.page-nav.left{ left:8px; }
+.page-nav.right{ right:8px; }
+.page-nav:disabled{
+  opacity:.4;
+  cursor:default;
+}
+/* 搜索结果列表 */
+.list .item{display:flex;gap:10px;padding:10px;border-bottom:1px solid var(--card-border)}
+.item .mini{width:64px;height:64px;background:#eee center/cover no-repeat;border-radius:8px;border:1px solid var(--card-border)}
+.item .txt{flex:1}
+.item .t{font-weight:700}
+.hl{background:linear-gradient(transparent 20%, #fff0a8 20%, #fff0a8 80%, transparent 80%);}
+/* 主题：粉 / 蓝 / 白/ 黑 */
+/* 粉·梦糖 */
+.theme-pink {
+  --primary:#ff7aa8;
+  --bg:#fff;
+  --card:#fff;
+  --fg:#333;
+  --chip-bg:#ffe5ef;
+  --chip-fg:#b03b66;
+}
+
+/* 蓝·清风 */
+.theme-blue {
+  --primary:#a9d8ff;
+  --bg:#fafdff;
+  --card:#ffffff;
+  --fg:#2b3e57;
+  --chip-bg:#e8f4ff;
+  --chip-fg:#3a6be0;
+}
+
+/* 白·极简 */
+.theme-white {
+  --primary:#bbb;
+  --bg:#ffffff;          /* 真·纯白底 */
+  --card:#ffffff;
+  --fg:#444;
+  --chip-bg:#f9f9f9;
+  --chip-fg:#666;
+}
+
+/* 黑·夜幕 */
+.theme-dark {
+  --primary:#444;        /* 按钮深灰，不粉 */
+  --bg:transparent;      /* 保留底图！不要黑底 */
+  --card:#ffffff;   /* 卡片保持白底 */
+  --fg:#444;
+  --chip-bg:#333;
+  --chip-fg:#ddd;
+}
+/* 黑色主题下加号按钮改为纯黑底白字 */
+body.theme-dark .fab {
+  background: #000 !important;
+  color: #fff !important;
+}
+/* 白色主题下：顶栏按钮保持白色，不要变成灰块 */
+body.theme-white .header .btn {
+  background:#fff;
+  color:#444;
+  border:1px solid var(--card-border);
+}
+
+/* 让白色主题真正纯白，按钮不灰 */
+body.theme-white .header .btn {
+  background: #fff !important;
+  color: #444 !important;
+  border: 1px solid #ddd !important;
+}
+
+
+/* === 白色主题下，加号按钮改为纯白 === */
+body.theme-white .fab {
+  background: #fff !important;
+  color: #222 !important;
+  border: 1px solid #ddd !important;
+}
+body.theme-dark .header .title {
+  color: #222 !important;           /* 顶部标题保持深色 */
+}
+
+/* === 搜索结果所有文字强制黑色 === */
+#searchResultInline,
+#searchResultInline *,
+.list .item *,
+.list .item .txt,
+.list .item .sub {
+  color: #000 !important;
+}
+/* 顶栏按钮自动跟随主题色 */
+.header .btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 6px 12px;
+    margin-left: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.header .btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+
+/* 去掉丑的“设首页背景”灰框 */
+#btnTheme, #btnFav, #btnSearch {
+    box-shadow: 0 0 5px rgba(255,255,255,0.3);
+}
+/* 状态点 */
+.statusdot{width:10px;height:10px;border-radius:50%;background:#bbb;display:inline-block;margin-left:6px}
+.statusdot.ok{background:#16c60c}
+/* 笔记里的小缩略图样式 */
+.thumbnail{
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  cursor: pointer;
+}
+/* 全屏图片预览蒙版 */
+.img-preview-mask{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.img-preview-mask img{
+  max-width: 96vw;
+  max-height: 96vh;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+
+/* 鼠标/手指按住时微微放大一点 */
+.thumbnail:hover{
+  transform: scale(1.05);
+  transition: 0.2s;
+}
+/* 富文本图文混排编辑器 */
+.rich-editor{
+  min-height:60vh;       /* 原来是 260px，改成占屏幕 60% 高 */
+  max-height:none;
+  overflow-y:auto;
+  word-break:break-word;
+  position:relative;
+}
+
+/* 正文里的小图样式（默认当贴纸用） */
+.inline-img{
+  position:relative;   /* ⭐ 记得加这一行，让 left/top 生效 */
+  max-width:100%;
+  width:60%;
+  height:auto;
+  display:block;
+  margin:10px auto;
+  border-radius:12px;
+  cursor:pointer;
+}
+/* —— v1.3 额外：顶栏内联面板 —— */
+#inlineBars{padding-top:0}
+#searchBar,#themeBar{display:none;padding:8px 0}
+</style>
+<script>
+// —— 图片工具：预览 + 编辑模式（拖动 / 缩放） ——
+
+// 点击小图放大看看原图（编辑模式关的时候才生效）
+function openImagePreview(src){
+  if (!src) return;
+  const mask = document.createElement('div');
+  mask.className = 'img-preview-mask';
+  mask.innerHTML = `<img src="${src}" alt="preview">`;
+  mask.onclick = () => mask.remove();   // 点任意地方关闭
+  document.body.appendChild(mask);
+}
+// —— 图片点击：预览 + 缩放 + 拖动（改进版 + 支持删大图） ——
+document.addEventListener('click', function (e) {
+  const el = e.target;
+  if (!el || el.tagName !== 'IMG') return;
+
+  const isInline = el.classList.contains('inline-img'); // 图文混排小图
+  const isThumb  = el.classList.contains('thumbnail');  // note 页缩略图
+  const isMain   = !!el.closest('.imgbox');             // 详情页大图
+
+  // 🗑 删除图片模式：正文里的小图（inline-img）
+  if (isInline && window.__imgEditMode && window.__imgDeleteMode) {
+    const editor = el.closest('.rich-editor');
+    if (editor) {
+      if (confirm('要删除这张图片吗？')) {
+        const p = el.parentElement;
+
+        el.remove();
+
+        if (
+          p &&
+          p.tagName === 'P' &&
+          !p.textContent.trim() &&
+          !p.querySelector('img')
+        ) {
+          p.remove();
+        }
+
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+    return;
+  }
+
+  // 🗑 删除图片模式：详情页大图
+  if (isMain && window.__imgEditMode && window.__imgDeleteMode) {
+    // 找到当前专辑和当前页
+    const alb = db.albums.find(a => a.id === current.albumId);
+    if (!alb) return;
+    const page = alb.pages.find(p => p.id === current.pageId);
+    if (!page || !page.img) return;
+
+    if (!confirm('要删除这张主图吗？')) return;
+
+    page.img = '';
+    page.updated = Date.now();
+    autosave();
+    render();
+    return;
+  }
+
+  // ① 编辑 + 放大缩小模式：只对 inline-img 生效
+  if (isInline && window.__imgEditMode && window.__imgResizeMode) {
+    const sizes = [20, 40, 60, 80, 100];
+    let idx = Number(el.dataset.szIndex || '-1');
+    idx = (idx + 1) % sizes.length;
+    el.style.width = sizes[idx] + '%';
+    el.style.height = 'auto';
+    el.dataset.szIndex = String(idx);
+
+    const editor = el.closest('.rich-editor');
+    if (editor) editor.dispatchEvent(new Event('input', { bubbles: true }));
+    return;
+  }
+
+  // ② 普通点击 → 打开预览（删除模式关的时候）
+  if (isInline || isThumb || isMain) {
+    openImagePreview(el.src);
+  }
+});
+// 🆕 拖动模式逻辑（会记住位置版）
+let dragImg = null, startX = 0, startY = 0, baseX = 0, baseY = 0;
+
+document.addEventListener('pointerdown', (e)=>{
+  if (!window.__imgEditMode || !window.__imgMoveMode) return;
+  const el = e.target;
+  if (el.tagName === 'IMG' && el.classList.contains('inline-img')) {
+
+    dragImg = el;
+    dragImg.style.position   = 'relative';
+    dragImg.style.touchAction = 'none';
+
+    startX = e.clientX;
+    startY = e.clientY;
+
+    // 已有偏移量（上一次拖动结果）
+    baseX = Number(dragImg.dataset.offX || '0');
+    baseY = Number(dragImg.dataset.offY || '0');
+
+    e.preventDefault();
+  }
+});
+
+document.addEventListener('pointermove', (e)=>{
+  if (!dragImg) return;
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+
+  const curX = baseX + dx;
+  const curY = baseY + dy;
+
+  dragImg.style.left = curX + 'px';
+  dragImg.style.top  = curY + 'px';
+
+  // 写入 data-*，下次还能接着拖
+  dragImg.dataset.offX = String(curX);
+  dragImg.dataset.offY = String(curY);
+});
+
+document.addEventListener('pointerup', ()=>{
+  if (dragImg) {
+    // 通知编辑器“内容变了”，触发保存
+    const editor = dragImg.closest('.rich-editor');
+    if (editor) {
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    dragImg = null;
+  }
+});
+// ⭐ 标题 / 标签 / 正文 / URL（note + rich + font）统一自动保存
+document.addEventListener('input', (e) => {
+  const alb = db.albums.find(a => a.id === current.albumId);
+  if (!alb) return;
+  const p = alb.pages.find(p => p.id === current.pageId);
+  if (!p) return;
+
+  const el = e.target;
+
+  // 标题
+  if (el.id === 'inpTitle') {
+    p.title = el.value.trim();
+    p.updated = Date.now();
+    autosave();
+    return;
+  }
+
+  // 标签
+  if (el.id === 'inpTags') {
+    const tags = el.value
+      .split(/\s+/)
+      .filter(Boolean);
+    p.tags = tags;
+    p.updated = Date.now();
+    autosave();
+    return;
+  }
+
+  // 普通正文：textarea（模式 1 + 2 的“正文”）+ 字体预览文案
+  if (el.id === 'inpNote') {
+    p.note = el.value;
+    p.updated = Date.now();
+    autosave();
+
+    if (p.layout === 'font') {
+      const preview = document.getElementById('fontPreview');
+      if (preview) {
+        preview.textContent = p.note || 'Abc 你好';
+      }
+    }
+    return;
+  }
+
+  // URL 列表（字体 / 图片链接，每行一条）
+  if (el.id === 'inpUrls') {
+    const lines = (el.value || '')
+      .split(/\n+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    p.urls = lines;
+    p.updated = Date.now();
+    autosave();
+
+    if (p.layout === 'font') {
+      const first = lines[0] || '';
+      applyUrlPreview(first);
+    }
+    return;
+  }
+
+  // 图文混排正文：contenteditable div（模式 3）
+  if (el.id === 'richEditor') {
+    p.rich = el.innerHTML;
+    p.updated = Date.now();
+    autosave();
+    return;
+  }
+});
+
+// 根据 URL / TTF 链接应用字体预览（仅当前详情页生效）
+
+function applyUrlPreview(url){
+  try{
+    if(!url) return;
+    if(!/^https?:\/\//.test(url)) return;
+
+    var box = document.getElementById('fontPreview');
+    if(!box) return;
+
+    // 清理旧样式（兼容旧版本）
+    var styleId = 'dynamicFontPreview';
+    var old = document.getElementById(styleId);
+    if(old && old.parentNode) old.parentNode.removeChild(old);
+
+    var clean = (url.split('?')[0] || '');
+
+    // 仅对字体文件尝试加载字体
+    if(/\.(ttf|otf|woff2?|TTF|OTF|WOFF2?)$/.test(clean)){
+      // 若浏览器支持 FontFace，用动态字体方式加载，避免缓存错乱
+      if (window.FontFace) {
+        var family = 'MoxiePreviewFont_' + Date.now().toString(36);
+        var font = new FontFace(family, 'url(' + url + ')');
+        font.load().then(function(loaded){
+          try{
+            document.fonts.add(loaded);
+            box.style.fontFamily = "'" + family + "', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+          }catch(e){
+            console.error(e);
+          }
+        }).catch(function(err){
+          console.error('字体加载失败', err);
+        });
+      } else {
+        // 旧浏览器兜底：还是使用 @font-face 注入
+        var style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = "@font-face{font-family:'MoxiePreviewFont';src:url('" + url.replace(/'/g, "\\'") + "');font-weight:normal;font-style:normal;}#fontPreview{font-family:'MoxiePreviewFont',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background-image:none!important;}";
+        document.head.appendChild(style);
+      }
+
+      // 如果当前预览文字为空，给一个默认文案
+      if (!box.textContent || !box.textContent.trim()) {
+        box.textContent = 'Abc 你好';
+      }
+      box.style.display = 'flex';
+      box.style.alignItems = 'center';
+      box.style.justifyContent = 'center';
+    }else{
+      // 非字体文件（比如图片链接），退回默认字体，只做展示
+      box.style.fontFamily = '';
+    }
+  }catch(e){
+    console.error(e);
+  }
+}
+
+
+
+function initFontThumbs(){
+  try{
+    var boxes = document.querySelectorAll('.thumb .img.font-thumb');
+    if(!boxes.length) return;
+
+    // 清理旧的缩略字体样式，避免越渲染越多
+    var oldStyles = document.querySelectorAll('style[data-font-thumb="1"]');
+    oldStyles.forEach(function(s){
+      if(s && s.parentNode) s.parentNode.removeChild(s);
+    });
+
+    boxes.forEach(function(box, idx){
+      var url = box.getAttribute('data-url') || '';
+      if(!url) return;
+      var clean = (url.split('?')[0] || '').toLowerCase();
+      var isFont = /\.(ttf|otf|woff2?)$/.test(clean);
+      if(!isFont) return;
+
+      var fam = 'MoxieFontThumb_' + idx;
+      var st = document.createElement('style');
+      st.setAttribute('data-font-thumb','1');
+      st.textContent = "@font-face{font-family:'"+fam+"';src:url('"+url.replace(/'/g, "\'")+"');font-weight:normal;font-style:normal;}";
+      document.head.appendChild(st);
+
+      var span = box.querySelector('.font-sample');
+      if(!span){
+        span = document.createElement('span');
+        span.className = 'font-sample';
+        span.textContent = 'Abc 你好';
+        box.appendChild(span);
+      }
+      span.style.fontFamily = fam + ", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      span.style.display = 'flex';
+      span.style.alignItems = 'center';
+      span.style.justifyContent = 'center';
+      span.style.width = '100%';
+      span.style.height = '100%';
+    });
+  }catch(e){
+    console.error('initFontThumbs error', e);
+  }
+}
+
+// v1.3 SafeButtons：所有关键按钮用内联 onclick，避免事件被吞
+function onSearchBtn(){ var b=document.getElementById('searchBar'); if(!b) return; b.style.display=(b.style.display==='none'||b.style.display==='')?'block':'none'; }
+function onThemeBtn(){ var b=document.getElementById('themeBar'); if(!b) return; b.style.display=(b.style.display==='none'||b.style.display==='')?'block':'none'; }
+function onFavBtn(){ current.view='favs'; current.results=null; render(); }
+
+function onFabBtn(){
+  // 首页：点 + = 新建专辑
+  if (current.view === 'home') {
+    openNewAlbumDialog();
+    return;
+  }
+
+  // 只有在「专辑内部」才弹出 1/2/3/4 选择
+  if (current.view !== 'album') return;
+
+  var choice = prompt(
+    '输入数字选择操作:\n' +
+    '1 导入图片（每张自动变成一页）\n' +
+    '2 新建文字+多图页（正文在上面，下面有小缩略图）\n' +
+    '3 新建图文混排页（可以在正文里插入小图）\n' +
+    '4 新建字体预览页（上半预览，下半输入 URL/ttf）',
+    '1'
+  );
+
+  var alb = db.albums.find(a => a.id === current.albumId);
+  if (!choice || !alb) return;
+
+  if (choice === '1') {
+    // ① 一次导入很多图片：每张变成单独一页
+    pickImages((arr) => {
+      arr.forEach(data => {
+        alb.pages.push({
+          id: id(),
+          title: '',
+          note: '',
+          tags: [],
+          urls: [],
+          img: data,
+          star: false,
+          created: Date.now(),
+          updated: Date.now()
+        });
+      });
+      autosave();
+      render();
+    });
+
+  } else if (choice === '2') {
+    // ② 文字 + 多图模式（上面正文，下面一排缩略图）
+    var p2 = {
+      id: id(),
+      title: '',
+      note: '',
+      tags: [],
+      urls: [],
+      layout: 'note',
+      imgList: [],
+      img: null,
+      star: false,
+      created: Date.now(),
+      updated: Date.now()
+    };
+    alb.pages.push(p2);
+    autosave();
+    openPage(alb.id, p2.id);
+
+  } else if (choice === '3') {
+    // ③ 图文混排模式（可以在正文里插入小图，支持缩放 / 拖动）
+    var p3 = {
+      id: id(),
+      title: '',
+      note: '',
+      rich: '',
+      tags: [],
+      urls: [],
+      layout: 'rich',
+      imgList: [],
+      img: null,
+      star: false,
+      created: Date.now(),
+      updated: Date.now()
+    };
+    alb.pages.push(p3);
+    autosave();
+    openPage(alb.id, p3.id);
+
+  } else if (choice === '4') {
+    // ④ 字体预览页：上半预览，下半输入
+    var p4 = {
+      id: id(),
+      title: '',
+      note: '',
+      rich: '',
+      tags: [],
+      urls: [],
+      layout: 'font',
+      imgList: [],
+      img: null,
+      star: false,
+      created: Date.now(),
+      updated: Date.now()
+    };
+    alb.pages.push(p4);
+    autosave();
+    openPage(alb.id, p4.id);
+  }
+}
+/* ===== 数据层 ===== */
+window.__imgEditMode = false;   // 图片编辑模式：默认关
+window.__imgResizeMode = false;
+window.__imgMoveMode = false;
+
+// 使用 IndexedDB 来存储大容量数据，避免 localStorage 空间限制
+const idbKeyval = {
+  get(key) {
+    return new Promise((resolve, reject) => {
+      const open = indexedDB.open('moxie_books_idb', 1);
+      open.onupgradeneeded = () => {
+        open.result.createObjectStore('store');
+      };
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction('store', 'readonly');
+        const store = tx.objectStore('store');
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      };
+      open.onerror = () => reject(open.error);
+    });
+  },
+  set(key, value) {
+    return new Promise((resolve, reject) => {
+      const open = indexedDB.open('moxie_books_idb', 1);
+      open.onupgradeneeded = () => {
+        open.result.createObjectStore('store');
+      };
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction('store', 'readwrite');
+        const store = tx.objectStore('store');
+        const req = store.put(value, key);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      };
+      open.onerror = () => reject(open.error);
+    });
+  }
+};
+
+const LS_KEY='moxie_books_v1';
+let db = {
+  meta:{theme:'pink', bgs:{home:null,grid:null,detail:null}},
+  albums:[
+    {id:id(), name:'文章本',   type:'article', cover:null, bgGrid:null, bgDetail:null, pages:[]},
+    {id:id(), name:'字体',     type:'fonts',   cover:null, bgGrid:null, bgDetail:null, pages:[]},
+    {id:id(), name:'网址收藏', type:'url',     cover:null, bgGrid:null, bgDetail:null, pages:[]},
+  ]
+};
+let current = {
+  view: 'home',
+  albumId: null,
+  pageId: null,
+  onlyStar: false,
+  tagFilter: null,    // ⭐ 当前选中的标签（null = 不筛选）
+  results: null,
+  readingMode: false  // 📖 阅读模式开关
+};
+let currentAlbumEditId = null;  // 正在编辑哪本专辑（null = 新建）
+function id(){ return Math.random().toString(36).slice(2)+Date.now().toString(36); }
+
+async function save(){
+  try{
+    await idbKeyval.set(LS_KEY, db);
+    markSaved(); // 小绿点亮起：说明存住了
+  }catch(e){
+    console.error(e);
+    alert('存储失败了：浏览器的 IndexedDB 被限制了(>_<)\n' +
+          '可以检查是否是无痕/隐私模式，或者先删掉一些不太重要的页再试一次～');
+  }
+}
+
+async function load(){
+  try{
+    const data = await idbKeyval.get(LS_KEY);
+    return data || null;
+  }catch(e){
+    console.error(e);
+    return null;
+  }
+}
+/*
+async // 可选：请求浏览器“尽量别把我的存档清掉”
+(function(){
+  try{
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist();
+    }
+  }catch(e){}
+})();
+*/
+
+function markDirty(){
+  const d = document.getElementById('statusDot');
+  if (d) d.classList.remove('ok');
+}
+function markSaved(){
+  const d = document.getElementById('statusDot');
+  if (d) d.classList.add('ok');
+}
+
+// auto save
+let saveTimer = null;
+function autosave(){
+  markDirty();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 400);
+}
+document.addEventListener('visibilitychange', ()=>{
+  if (document.visibilityState === 'hidden') save();
+});
+window.addEventListener('pagehide', save);
+/* ===== 主题 ===== */
+function applyTheme(){
+  document.body.classList.remove('theme-pink','theme-blue','theme-white','theme-dark');
+  if(db.meta.theme==='pink')  document.body.classList.add('theme-pink');
+  if(db.meta.theme==='blue')  document.body.classList.add('theme-blue');
+  if(db.meta.theme==='white') document.body.classList.add('theme-white');
+  if(db.meta.theme==='dark')  document.body.classList.add('theme-dark');
+
+  // 背景：首页
+  document.body.style.backgroundImage = db.meta.bgs.home?`url(${db.meta.bgs.home})`:'';
+  document.body.style.backgroundSize='cover';
+  document.body.style.backgroundAttachment='fixed';
+}
+// ⭐ 缩略图大小：s 小 / m 中 / l 大 / 4c 四列 / 5c 五列
+function cycleThumbSize(){
+  const order = ['s','m','l','4c','5c'];   // 依次切：小→中→大→4列→5列→再回小
+  let cur = db.meta.thumbSize || 'm';
+  if (!order.includes(cur)) cur = 'm';     // 防止旧数据里是奇怪值
+  const idx = order.indexOf(cur);
+  db.meta.thumbSize = order[(idx + 1) % order.length];
+  autosave();
+  render();
+}
+
+/* ===== 视图渲染 ===== */
+const view=document.getElementById('view');
+const titleEl=document.getElementById('title');
+const btnBack=document.getElementById('btnBack');
+
+function render(){
+  applyTheme();
+  const alb = db.albums.find(a=>a.id===current.albumId);
+  if(current.view==='home'){
+    titleEl.textContent='Moxie Books';
+    btnBack.style.display='none';
+    view.innerHTML=`<div class="grid">${db.albums.map(a=>albumCard(a)).join('')}</div>`;
+    document.body.style.backgroundImage = db.meta.bgs.home?`url(${db.meta.bgs.home})`:'';
+} else if (current.view === 'album') {
+    // 当前这本专辑
+    const alb = db.albums.find(a => a.id === current.albumId);
+
+    titleEl.textContent = alb.name + (current.onlyStar ? ' · 仅看★' : '');
+    btnBack.style.display = 'inline-block';
+
+    // 先按「仅看★」筛一遍
+    const baseList = alb.pages.filter(p => !current.onlyStar || p.star);
+
+    // 收集所有出现过的标签
+    const tagSet = new Set();
+    alb.pages.forEach(p => (p.tags || []).forEach(t => tagSet.add(t)));
+    let tagArr = Array.from(tagSet);
+
+    // 读取本地置顶标签，让它们排在最前面
+    const pinnedTags = JSON.parse(localStorage.getItem('pinnedTags') || '[]');
+    tagArr.sort((a, b) => pinnedTags.includes(b) - pinnedTags.includes(a));
+
+    // 如果当前选中了某个标签，再按标签二次筛选
+    const list = current.tagFilter
+      ? baseList.filter(p => (p.tags || []).includes(current.tagFilter))
+      : baseList;
+
+    // 缩略图大小（小 / 中 / 大 / 4列 / 5列）
+const size = db.meta.thumbSize || 'm';
+const labelMap = {
+  s:   '小',
+  m:   '中',
+  l:   '大',
+  '4c':'超小',
+  '5c':'更小'
+};
+const label = labelMap[size] || '中';
+    // 标签筛选条 HTML
+    const tagBarHtml = tagArr.length ? `
+      <div class="row tag-row" id="tagBar">
+        <button class="btn tag-btn ${current.tagFilter ? '' : 'tag-on'}" data-tag="">
+          全部
+        </button>
+        ${tagArr
+          .map(
+            (t) => `
+          <button class="btn tag-btn ${
+            current.tagFilter === t ? 'tag-on' : ''
+          }" data-tag="${escapeHtml(t)}">
+            ${escapeHtml(t)}
+          </button>
+        `
+          )
+          .join('')}
+      </div>
+    ` : '';
+
+    // 组装整个专辑页
+    view.innerHTML = `
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn" id="btnOnlyStar">
+          ${current.onlyStar ? '仅看★：开' : '仅看★：关'}
+        </button>
+        <button class="btn" id="btnThumbSize">缩略：${label}</button>
+        <div class="spacer"></div>
+        <button class="btn" id="btnSetCover">设封面</button>
+        <button class="btn" id="btnSetBg">设背景</button>
+      </div>
+
+      ${tagBarHtml}
+
+      <div class="grid thumb-grid thumb-${size}">
+        ${list.map((p) => thumb(p, alb)).join('')}
+      </div>
+    `;
+
+    // 「仅看★」切换
+    document.getElementById('btnOnlyStar').onclick = () => {
+      current.onlyStar = !current.onlyStar;
+      render();
+    };
+
+    // 缩略图大小切换（小 / 中 / 大）
+    document.getElementById('btnThumbSize').onclick = () => {
+      cycleThumbSize();
+    };
+
+    // 标签条：点击 = 筛选；双击 = 置顶/取消置顶
+    const tagBar = document.getElementById('tagBar');
+    if (tagBar) {
+      tagBar.querySelectorAll('button.tag-btn').forEach((btn) => {
+        const t = btn.dataset.tag || '';
+
+        // 点击：切换当前筛选标签
+        btn.onclick = () => {
+          current.tagFilter = t || null; // 空字符串 = 全部
+          render();
+        };
+
+        // 渲染时：如果是置顶标签，加上粉色背景
+        if (t && pinnedTags.includes(t)) {
+          btn.classList.add('tag-pinned');
+        }
+
+        // 双击：切换置顶状态
+        btn.addEventListener('dblclick', (e) => {
+          e.preventDefault();
+          let stored = JSON.parse(localStorage.getItem('pinnedTags') || '[]');
+
+          if (t && stored.includes(t)) {
+            // 已经置顶 -> 取消置顶
+            stored = stored.filter((x) => x !== t);
+          } else if (t) {
+            // 新置顶 -> 插到最前面
+            stored.unshift(t);
+          }
+
+          localStorage.setItem('pinnedTags', JSON.stringify(stored));
+          render();
+        });
+      });
+    }
+
+    // 设封面：只改封面，不动背景
+    document.getElementById('btnSetCover').onclick = () => {
+      const alb = db.albums.find((a) => a.id === current.albumId);
+      if (!alb) return;
+      pickImage((data) => {
+        alb.cover = data;
+        save();
+        render();
+      });
+    };
+
+    // 设背景：只改专辑网格背景，不改封面
+    document.getElementById('btnSetBg').onclick = () => {
+      const alb = db.albums.find((a) => a.id === current.albumId);
+      if (!alb) return;
+      pickImage((data) => {
+        alb.bgGrid = data;
+        save();
+        render();
+      });
+    };
+
+    // 专辑内部背景
+    document.body.style.backgroundImage = alb.bgGrid
+      ? `url(${alb.bgGrid})`
+      : db.meta.bgs.grid
+      ? `url(${db.meta.bgs.grid})`
+      : '';
+      // 字体缩略图预览（第四种布局用）
+      try{ initFontThumbs(); }catch(e){ console.error(e); }
+
+ }else if(current.view==='detail'){
+  const p = alb.pages.find(p=>p.id===current.pageId);
+  if (!p) { current.view='album'; render(); return; }
+
+  const isNote  = p.layout === 'note';   // note = 文字 + 多图
+  const isRich  = p.layout === 'rich';   // rich = 图文混排
+  const isFont  = p.layout === 'font';   // font = 字体预览
+  const detailBg = (p && p.bgDetail) || alb.bgDetail || db.meta.bgs.detail || '';
+
+  // 顶部标题
+  titleEl.textContent = alb.name + (p.star ? ' ★' : '');
+  btnBack.style.display = 'inline-block';
+
+  // 同专辑内的上一页 / 下一页
+  const scope   = listInScope(alb);
+  let   idx     = scope.findIndex(x => x.id === p.id);
+  if (idx < 0) idx = 0;
+  const total   = scope.length || 1;
+  const pageIdx = Math.min(idx + 1, total);
+  const hasPrev = pageIdx > 1;
+  const hasNext = pageIdx < total;
+  const progress = Math.round(pageIdx * 100 / total);
+
+  // 小进度条 HTML（只有多页时才显示）
+  const progressHtml = total > 1 ? `
+    <div class="row" id="pageProgressRow"
+         style="justify-content:flex-end;align-items:center;
+                font-size:12px;color:#666;margin:6px 0 4px;">
+      <div style="margin-right:8px;">${pageIdx} / ${total}</div>
+      <div style="flex:0 0 60%;max-width:160px;height:6px;
+                  border-radius:999px;background:#eee;overflow:hidden;">
+        <div style="width:${progress}%;height:100%;
+                    background:linear-gradient(90deg,var(--primary),#ffd1e6);"></div>
+      </div>
+    </div>
+  ` : '';
+
+  const showUrlField = isFont;  // 字体预览页显示 URL 输入框
+
+  view.innerHTML = `
+    <div class="detail" data-layout="${isNote ? 'note' : (isRich ? 'rich' : 'image')}">
+
+      <!-- 上面大图 + 左右翻页 -->
+      <div class="imgbox" id="detailImgBox"
+           style="${detailBg ? 'background-image:url(' + detailBg + ');background-size:cover;background-position:center;' : ''}">
+        ${hasPrev ? '<button class="page-nav left" id="btnPrev">&lt;</button>' : ''}
+        ${p.img ? `<img src="${p.img}" alt=""/>` : `<div style="color:#999;padding:40px">暂无图片</div>`}
+        ${hasNext ? '<button class="page-nav right" id="btnNext">&gt;</button>' : ''}
+      </div>
+
+      ${progressHtml}
+
+      <!-- 标题 -->
+      <div class="field" id="detailTitleBlock">
+        <small class="muted">标题</small>
+        <input class="input" id="inpTitle" value="${escapeHtml(p.title || '')}"/>
+      </div>
+
+      ${p.layout === 'font' ? `
+      <div class="field" id="fontPreviewField">
+        <small class="muted">预览</small>
+        <div id="fontPreview"
+             class="input"
+             style="min-height:120px;font-size:32px;display:flex;align-items:center;justify-content:center;">
+          ${escapeHtml(p.note || 'Abc 你好')}
+        </div>
+      </div>
+      <div class="field" id="fontPreviewTextField">
+        <small class="muted">预览文字</small>
+        <textarea class="input" id="inpNote" rows="1">${escapeHtml(p.note || 'Abc 你好')}</textarea>
+      </div>
+      ` : ''}
+
+      <!-- 标签 + 功能按钮 + 收藏（阅读模式单独一行） -->
+      <div class="field"
+           id="detailMetaRow"
+           style="display:flex;flex-direction:row;align-items:center;gap:8px;">
+        <!-- 左侧标签输入框 -->
+    <input id="inpTags"
+               class="input"
+               placeholder="标签（空格分隔，例如：手写体 图体）"
+               style="flex:1;">
+
+        <!-- 右侧功能按钮们 -->
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button class="btn" id="btnDetailTools">⚙ 功能</button>
+
+          <!-- 功能面板：默认收起 -->
+          <div id="imgEditPanel"
+               style="display:none;flex-wrap:wrap;gap:4px;max-width:60vw;">
+            <button class="btn" id="btnInsertImg"  type="button">＋ 在光标处插图片</button>
+            <button class="btn" id="btnToggleImgEdit" type="button">🖼 图片编辑：关</button>
+            <button class="btn" id="btnResizeMode" type="button">🔍 放大缩小：关</button>
+            <button class="btn" id="btnMoveMode"   type="button">🕹 移动：关</button>
+            <button class="btn" id="btnDeleteImg"   type="button">🗑 删除图片：关</button>
+            <button class="btn" id="btnReplaceMain" type="button">🖼 换主图</button>
+            <button class="btn" id="btnSaveImg"     type="button">💾 图片图片</button>
+            <button class="btn" id="btnDeletePage"  type="button">🗑 删除本页</button>
+            <button class="btn" id="btnSetDetailBg" type="button">🌈 设详情背景</button>
+            
+          </div>
+
+          <!-- 收藏 -->
+          <button class="btn" id="btnStar">
+            ${p.star ? '★ 已收藏' : '☆ 收藏'}
+          </button>
+        </div>
+      </div>
+<!-- 阅读模式：单独占一行，这样开启后按钮还在 -->
+      ${!isFont ? `
+      <div class="field"
+           id="readingRow"
+           style="display:flex;justify-content:flex-end;">
+        <button class="btn" id="btnReadingMode">📖 阅读模式</button>
+      </div>
+      ` : ''}
+      <!-- URL（关掉） -->
+      ${showUrlField ? `
+      <div class="field">
+        <small class="muted">URL（每行一条）</small>
+        <textarea class="input" id="inpUrls" rows="2">${(p.urls || []).join('\n')}</textarea>
+      </div>` : ''}
+
+      <!-- 正文：rich / 普通二选一 -->
+    ${!isFont ? (isRich ? `
+      <!-- 图文混排：整体包一层 detailRichField，方便阅读模式一起隐藏/显示 -->
+      <div class="field" id="detailRichField">
+        <small class="muted">正文</small>
+        <div id="richEditor"
+             class="input rich-editor"
+             contenteditable="true"
+             style="${detailBg ? 'background-image:url(' + detailBg + ');background-size:cover;background-position:center;' : ''}">
+          ${p.rich || escapeHtml(p.note || '')}
+        </div>
+      </div>
+      ` : `
+      <!-- 普通图片页 / 文字页：整体包一层 detailNoteField -->
+      <div class="field" id="detailNoteField">
+        <small class="muted">正文</small>
+        <textarea class="input" id="inpNote" rows="10"
+          style="min-height:60vh;${detailBg ? 'background-image:url(' + detailBg + ');background-size:cover;background-position:center;' : ''}">${escapeHtml(p.note || '')}</textarea>
+      </div>
+      `) : ''}
+<!-- note 布局：多图缩略图 + 添加图片 -->
+      ${isNote ? `
+      <div class="field">
+        <small class="muted">图片（可多张）</small>
+        <div id="imageBox" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+          ${(p.imgList || []).map(img => `
+            <img src="${img}"
+                 class="thumbnail"
+                 style="width:120px;border-radius:6px;cursor:pointer">
+          `).join('')}
+        </div>
+        <button class="btn" id="addImageBtn" type="button">＋ 添加图片</button>
+      </div>
+      ` : ''}
+
+    </div>
+  `;
+// ⭐ 重新进入详情页时，把保存过的标题 / 标签 / 正文 写回输入框
+  const inpTitle = document.getElementById('inpTitle');
+  const inpTags  = document.getElementById('inpTags');
+  const inpNote  = document.getElementById('inpNote');   // 🆕 正文 textarea
+
+  if (inpTitle) inpTitle.value = p.title || '';
+  if (inpTags)  inpTags.value  = (p.tags || []).join(' ');
+  if (inpNote)  inpNote.value  = p.note  || '';
+
+  // 👉 新增：正文输入时立刻保存（不再指望外面的全局监听）
+  if (inpNote) {
+    inpNote.oninput = function () {
+      // 再找一次当前页，保证拿到的就是正在编辑的那一页
+      const alb  = db.albums.find(a => a.id === current.albumId);
+      if (!alb) return;
+      const page = alb.pages.find(x => x.id === current.pageId);
+      if (!page) return;
+
+      page.note    = this.value;     // 把正文写回 page.note
+      page.updated = Date.now();
+      autosave();                    // 丢给原来的自动保存逻辑
+    };
+  }
+
+  // ====== 顶部上下页导航 ======
+  const prevEl = document.getElementById('btnPrev');
+  if (prevEl) prevEl.onclick = ()=>{ navSibling(-1); };
+
+  const nextEl = document.getElementById('btnNext');
+  if (nextEl) nextEl.onclick = ()=>{ navSibling(1); };
+
+  // ====== 收藏 ======
+  const starEl = document.getElementById('btnStar');
+  if (starEl) {
+    starEl.onclick = ()=>{
+      p.star = !p.star;
+      p.updated = Date.now();
+      autosave();
+      render();
+    };
+  }
+
+  // ====== 详情页里的「⚙ 功能」开合按钮 ======
+  const detailToolsBtn = document.getElementById('btnDetailTools');
+  const editPanel      = document.getElementById('imgEditPanel');
+
+  if (detailToolsBtn && editPanel) {
+    editPanel.style.display = 'none';
+    detailToolsBtn.textContent = '⚙ 功能';
+
+    detailToolsBtn.onclick = () => {
+      const isHidden =
+        (editPanel.style.display === 'none' || !editPanel.style.display);
+      editPanel.style.display   = isHidden ? 'flex' : 'none';
+      detailToolsBtn.textContent = isHidden ? '⚙ 收起' : '⚙ 功能';
+    };
+  }
+
+  // ====== rich 文本编辑器（图文混排模式） ======
+  const richEditor   = document.getElementById('richEditor');
+  const insertBtn    = document.getElementById('btnInsertImg');
+  const toggleEdit   = document.getElementById('btnToggleImgEdit');
+  const resizeBtn    = document.getElementById('btnResizeMode');
+  const moveBtn      = document.getElementById('btnMoveMode');
+  const deleteImgBtn = document.getElementById('btnDeleteImg');  // 🆕 删除按钮
+
+  // 图片子开关（放大/移动/删除）在「图片编辑」关闭时一起隐藏
+  function updateImgSubTools() {
+    const show = !!window.__imgEditMode;
+    if (resizeBtn)    resizeBtn.style.display    = show ? 'inline-flex' : 'none';
+    if (moveBtn)      moveBtn.style.display      = show ? 'inline-flex' : 'none';
+    if (deleteImgBtn) deleteImgBtn.style.display = show ? 'inline-flex' : 'none';
+  }
+  updateImgSubTools();
+
+  // 文本内容改变就自动保存
+if (richEditor) {
+  richEditor.addEventListener('input', () => {
+    // 这里直接拿当前专辑和当前页，不再用不存在的 getCurrentPage()
+    const alb  = db.albums.find(a => a.id === current.albumId);
+    if (!alb) return;
+    const page = alb.pages.find(x => x.id === current.pageId);
+    if (!page) return;
+
+    const html = richEditor.innerHTML;  // 保留完整富文本
+    const text = richEditor.innerText;  // 纯文字版
+
+    // 富文本和纯文字都存一份
+    page.rich    = html;
+    page.note    = text;
+    page.updated = Date.now();
+    autosave();
+  });
+
+
+    // 删除模式：点图片就删除
+    richEditor.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!(target instanceof HTMLImageElement)) return;
+      if (!window.__imgEditMode || !window.__imgDeleteMode) return;
+
+      // 直接移除这张图片
+      target.remove();
+      p.rich = richEditor.innerHTML;
+      autosave();
+    });
+  }
+
+  // 选择图片并插入到光标处
+  if (insertBtn && richEditor) {
+    insertBtn.onclick = () => {
+      const i = document.createElement('input');
+      i.type = 'file';
+      i.accept = 'image/*';
+      i.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        readFile(file, data => {
+          insertImageAtCursor(richEditor, data);
+          p.rich = richEditor.innerHTML;
+          autosave();
+        });
+      };
+      i.click();
+    };
+  }
+
+  // 🖼 图片编辑模式总开关
+  if (toggleEdit) {
+    toggleEdit.onclick = () => {
+      window.__imgEditMode = !window.__imgEditMode;
+      toggleEdit.textContent = window.__imgEditMode
+        ? '🖼 图片编辑：开'
+        : '🖼 图片编辑：关';
+
+      updateImgSubTools();
+
+      if (window.__imgEditMode) {
+        if (editPanel)      editPanel.style.display = 'flex';
+        if (detailToolsBtn) detailToolsBtn.textContent = '⚙ 收起';
+      } else {
+        window.__imgResizeMode = false;
+        window.__imgMoveMode   = false;
+        window.__imgDeleteMode = false;
+        if (resizeBtn)    resizeBtn.textContent    = '🔍 放大缩小：关';
+        if (moveBtn)      moveBtn.textContent      = '🕹 移动：关';
+        if (deleteImgBtn) deleteImgBtn.textContent = '🗑 删除图片：关';
+        if (editPanel)      editPanel.style.display = 'none';
+        if (detailToolsBtn) detailToolsBtn.textContent = '⚙ 功能';
+      }
+    };
+  }
+
+  // 子开关：放大缩小 / 移动
+  if (resizeBtn) {
+    resizeBtn.onclick = () => {
+      window.__imgResizeMode = !window.__imgResizeMode;
+      resizeBtn.textContent = window.__imgResizeMode
+        ? '🔍 放大缩小：开'
+        : '🔍 放大缩小：关';
+    };
+  }
+
+  if (moveBtn) {
+    moveBtn.onclick = () => {
+      window.__imgMoveMode = !window.__imgMoveMode;
+      moveBtn.textContent = window.__imgMoveMode
+        ? '🕹 移动：开'
+        : '🕹 移动：关';
+    };
+  }
+
+  // 🗑 删除图片模式开关
+  if (deleteImgBtn) {
+    deleteImgBtn.onclick = () => {
+      if (!window.__imgEditMode) {
+        toast('detailMsg', '请先打开「图片编辑」再删图片噢～');
+        return;
+      }
+      window.__imgDeleteMode = !window.__imgDeleteMode;
+      deleteImgBtn.textContent = window.__imgDeleteMode
+        ? '🗑 删除图片：开'
+        : '🗑 删除图片：关';
+    };
+  }
+/* ====== 详情页：主图四按钮功能绑定 ====== */
+  const btnReplace = document.getElementById('btnReplaceMain');
+  const btnSave = document.getElementById('btnSaveImg');
+  const btnDel = document.getElementById('btnDeleteImg');
+  const btnBg = document.getElementById('btnSetDetailBg');
+
+  function getCurrent(){
+    const alb = db.albums.find(a => a.id === current.albumId);
+    if(!alb) return {};
+    const page = alb.pages.find(p => p.id === current.pageId);
+    return {alb,page};
+  }
+
+  // 🖼 换主图
+  if(btnReplace){
+    btnReplace.onclick = ()=>{
+      const {alb,page} = getCurrent();
+      if(!page)return alert("没有当前页！");
+      const input = document.createElement("input");
+      input.type="file";
+      input.accept="image/*";
+      input.onchange = e=>{
+        const file = e.target.files[0];
+        if(!file)return;
+        const reader=new FileReader();
+        reader.onload = ev=>{
+          page.img = ev.target.result;
+          autosave();
+          render();
+          alert("主图已替换！");
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    };
+  }
+
+  // 💾 保存图片
+  if(btnSave){
+    btnSave.onclick = ()=>{
+      const {page} = getCurrent();
+      if(!page || !page.img)return alert("当前页没有图片！");
+      const a=document.createElement("a");
+      a.href=page.img;
+      a.download="flipbook-img.jpg";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+  }
+
+// 🌈 设详情背景：点一下弹出选图，从相册选一张当详情背景
+if (btnBg) {
+  btnBg.onclick = ()=>{
+    const {alb} = getCurrent();
+    if (!alb) {
+      alert('没有当前专辑！');
+      return;
+    }
+    // 像“设封面 / 设背景”那样，从相册选图
+    pickImage((data)=>{
+      const cur = getCurrent();
+      if(!cur || !cur.page) return;
+      cur.page.bgDetail = data;
+      autosave();
+      alert('已设为本页详情背景！');
+      render();
+    });
+  };
+}
+// 🗑 删除本页按钮（不再依赖 toast，只用 alert）
+const btnDeletePage = document.getElementById('btnDeletePage');
+if (btnDeletePage) {
+  btnDeletePage.onclick = ()=>{
+    const {alb,page} = getCurrent();
+    if (!page) {
+      alert('没有当前页！');
+      return;
+    }
+    if (confirm('确定删除当前页吗？')) {
+      const idx = alb.pages.indexOf(page);
+      if (idx >= 0) alb.pages.splice(idx, 1);
+      autosave();
+      render();
+      alert('当前页已删除～');
+    }
+  };
+}
+  // ====== note 布局：多图上传 ======
+  const addImageBtn = document.getElementById('addImageBtn');
+  const imageBox    = document.getElementById('imageBox');
+  if (addImageBtn && imageBox) {
+    addImageBtn.onclick = ()=>{
+      const i = document.createElement('input');
+      i.type = 'file';
+      i.accept = 'image/*';
+      i.multiple = true;
+      i.onchange = (e)=>{
+        const files = Array.from(e.target.files || []);
+        files.forEach(file=>{
+          readFile(file, data=>{
+            p.imgList = p.imgList || [];
+            p.imgList.push(data);
+            if (!p.img) p.img = data;
+            const img = document.createElement('img');
+            img.src = data;
+            img.className = 'thumbnail';
+            img.style.width = '120px';
+            img.style.borderRadius = '6px';
+            img.style.cursor = 'pointer';
+            imageBox.appendChild(img);
+            p.updated = Date.now();
+            autosave();
+          });
+        });
+      };
+      i.click();
+    };
+  }
+
+// ====== 阅读模式：收起上面一堆，只留正文 ======
+const titleBlock = document.getElementById('detailTitleBlock');
+const metaRow    = document.getElementById('detailMetaRow');
+const readingBtn = document.getElementById('btnReadingMode');
+const noteField  = document.getElementById('detailNoteField');
+const richField  = document.getElementById('detailRichField');
+
+// 不再区分什么 image / note / rich，正文永远能看到
+function applyReadingMode() {
+  const on = !!current.readingMode;
+
+  // 上面的标题 + 标签 + 按钮
+  if (titleBlock) titleBlock.style.display = on ? 'none' : 'block';
+  if (metaRow)    metaRow.style.display    = on ? 'none' : 'flex';
+
+  // 正文区域一直保持可见
+  if (noteField) {
+    noteField.style.display = 'block';
+    noteField.style.pointerEvents = 'auto';
+  }
+  if (richField) {
+    richField.style.display = 'block';
+    richField.contentEditable = 'true';
+    richField.style.pointerEvents = 'auto';
+  }
+
+  if (readingBtn) {
+    readingBtn.textContent = on ? '📖 退出阅读' : '📖 阅读模式';
+  }
+}
+applyReadingMode();
+
+if (readingBtn) {
+  readingBtn.onclick = () => {
+    current.readingMode = !current.readingMode;
+    applyReadingMode();
+  };
+}
+  // ====== 详情页背景 ======
+  document.body.style.backgroundImage =
+    detailBg
+      ? `url(${detailBg})`
+      : '';
+
+  // 字体预览页：初始化一次字体
+  if (isFont && Array.isArray(p.urls) && p.urls.length > 0) {
+    applyUrlPreview(p.urls[0]);
+  }
+
+ }else if(current.view==='favs'){
+  titleEl.textContent='我的收藏 ★';
+  btnBack.style.display='inline-block';
+  const favs=[]; db.albums.forEach(a=>a.pages.forEach(p=>{ if(p.star) favs.push({a,p}) }));
+
+  const size = db.meta.thumbSize || 'm';
+
+  view.innerHTML=`
+    <div class="row" style="margin-bottom:10px">
+      <div class="spacer"></div>
+      <button class="btn" id="switchView">切换：${current.results?'列表':'网格'}</button>
+    </div>
+    ${current.results
+      ? favList(favs)
+      : `<div class="grid thumb-grid thumb-${size}">${favs.map(({a,p})=>thumb(p,a,true)).join('')}</div>`
+    }
+  `;
+    document.getElementById('switchView').onclick=()=>{ current.results = current.results?null:[]; render(); };
+  }
+
+  // 绑定返回
+  btnBack.onclick = () => {
+  if (current.view === 'detail') {
+    current.view = 'album';
+    current.readingMode = false;  // 退出详情顺便关阅读模式
+    render();
+  } else {
+    current.view = 'home';
+    render();
+  }
+};
+}
+// 包一层：每次 render 完成后，顺便干两件事：
+// 1）控制右下角「＋」显示；
+// 2）如果是图文混排页，把已经保存的 rich 文本塞回编辑器里。
+const _render = render;
+render = function () {
+  // 先让原来的渲染跑完
+  _render();
+
+  // ★ 修：图文混排（layout === 'rich'）恢复正文内容
+  if (current.view === 'detail') {
+    const richEditor = document.getElementById('richEditor');
+    if (richEditor) {
+      const alb = db.albums.find(a => a.id === current.albumId);
+      if (alb) {
+        const p = alb.pages.find(x => x.id === current.pageId);
+        if (p && p.layout === 'rich') {
+          // 优先用 p.rich（富文本），没有的话就用 p.note 兜底
+          if (p.rich && p.rich.trim()) {
+            richEditor.innerHTML = p.rich;
+          } else if (p.note && p.note.trim()) {
+            // 旧数据只有 note 的情况，先用纯文本填进去
+            richEditor.textContent = p.note;
+          }
+        }
+      }
+    }
+  }
+
+  // ★ 原来的：控制右下角「＋」
+  const fab = document.getElementById('fab');
+  if (!fab) return;
+
+  // 只在首页 / 专辑页显示加号，其他页面（详情 / 收藏）全部藏起来
+  if (current.view === 'home' || current.view === 'album') {
+    fab.style.display = 'flex';
+  } else {
+    fab.style.display = 'none';
+  }
+};
+function listInScope(alb){ return alb.pages.filter(p=>!current.onlyStar || p.star); }
+function navSibling(dir){
+  const alb = db.albums.find(a=>a.id===current.albumId);
+  const scope=listInScope(alb);
+  const idx = scope.findIndex(p=>p.id===current.pageId);
+  const target = scope[idx+dir];
+  if(target){ current.pageId=target.id; render(); }
+}
+
+function albumCard(a){
+  // 优先用封面，其次用网格背景，最后才用默认渐变
+  const bg = a.cover || a.bgGrid;
+
+// 小标签：优先显示你自定义的类型
+  let label = a.type || '专辑';
+  // 仅兼容旧数据
+  if (a.type === 'fonts')   label = '字体专辑';
+  else if (a.type === 'article') label = '文章本';
+  else if (a.type === 'url')     label = '网址本';
+
+  return `<div class="card" onclick="enterAlbum('${a.id}')">
+    <div class="cover" style="background-image:${bg ? `url(${bg})` : `linear-gradient(135deg, #f6d 0%, #9cf 100%)`};">
+      <div class="label">${label}</div>
+      <button class="card-menu-btn" onclick="event.stopPropagation(); openEditAlbum('${a.id}')">⋯</button>
+    </div>
+    <div class="body">
+      <div class="row">
+        <div class="name">${escapeHtml(a.name)}</div>
+        <div class="spacer"></div>
+        <div class="sub">${a.pages.length} 页</div>
+      </div>
+      <div class="sub">最近：${a.pages.length ? new Date(a.pages[a.pages.length - 1].updated || Date.now()).toLocaleDateString() : '—'}</div>
+    </div>
+  </div>`;
+}
+
+function thumb(p, alb, showAlbum){
+  const tags = (p.tags||[]).slice(0,3).map(t=>`<span class="chip">${escapeHtml(t)}</span>`).join('');
+  const isFontLayout = p.layout === 'font';
+  let imgHtml = '';
+  if (isFontLayout) {
+    const firstUrl = (p.urls && p.urls[0]) || '';
+    const clean = (firstUrl.split('?')[0] || '').toLowerCase();
+    const looksLikeFont = /\.(ttf|otf|woff2?)$/.test(clean);
+    if (firstUrl && !looksLikeFont) {
+      // 图片类：直接用 URL 做封面
+      imgHtml = `<div class="img" style="background-image:url(${firstUrl})"></div>`;
+    } else {
+      // 字体类：用文字预览，后面用 JS 套字体
+      imgHtml = `<div class="img font-thumb" data-url="${firstUrl ? escapeHtml(firstUrl) : ''}">
+        <span class="font-sample">${escapeHtml(p.note || 'Abc 你好')}</span>
+      </div>`;
+    }
+  } else {
+    imgHtml = `<div class="img" style="background-image:${p.img ? `url(${p.img})` : `linear-gradient(135deg,#eee,#ddd)`}"></div>`;
+  }
+
+  return `<div class="thumb" onclick="openPage('${alb.id}','${p.id}')">
+    ${imgHtml}
+    <button class="star ${p.star ? 'on' : ''}" onclick="event.stopPropagation();toggleStar('${alb.id}','${p.id}')">${p.star ? '★' : '☆'}</button>
+    <div class="meta">
+      <div class="row">
+        <div class="name" style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${escapeHtml(p.title || '无标题')}
+          ${showAlbum ? `<span class="sub"> · ${escapeHtml(alb.name)}</span>` : ''}
+        </div>
+      </div>
+      <div class="chips">${tags}</div>
+    </div>
+  </div>`;
+}
+function favList(favs){
+  return `<div class="list">${favs.map(({a,p})=>`
+    <div class="item" onclick="openPage('${a.id}','${p.id}')">
+      <div class="mini" style="background-image:${p.img?`url(${p.img})`:'linear-gradient(135deg,#eee,#ddd)'}"></div>
+      <div class="txt">
+        <div class="t">${escapeHtml(p.title||'无标题')} <span class="sub">| ${escapeHtml(a.name)}</span></div>
+        <div class="sub">${snippet(p)}</div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+ /* ===== 交互 ===== */
+function enterAlbum(aid){
+  current.view = 'album';
+  current.albumId = aid;
+  current.onlyStar = false;
+  current.tagFilter = null;   // ⭐ 每次进专辑先清空标签筛选
+  current.readingMode = false; // 进专辑时关掉阅读模式
+  render();
+}
+function openPage(aid,pid){
+  current.view = 'detail';
+  current.albumId = aid;
+  current.pageId = pid;
+  current.readingMode = false;   // 每次打开新页默认正常模式
+  render();
+}
+function toggleStar(aid,pid){ const a=db.albums.find(x=>x.id===aid); const p=a.pages.find(x=>x.id===pid); p.star=!p.star; p.updated=Date.now(); autosave(); render(); }
+// 顶栏主题（内联按钮，不用抽屉/遮罩）
+document.body.addEventListener('click',e=>{
+  if(e.target && e.target.dataset && e.target.dataset.themeInline){
+    const t=e.target.dataset.themeInline; db.meta.theme=t; autosave(); applyTheme();
+  }
+});
+
+// Inline 搜索条
+(function(){
+  const input = document.getElementById('searchInputInline');
+  const box = document.getElementById('searchResultInline');
+  if(input){
+    input.addEventListener('input', (e)=>{
+      const q=e.target.value.trim();
+      const out = search(q);
+      box.innerHTML = out.map(r=>`<div class="item" onclick="openPage('${r.a.id}','${r.p.id}')">
+        <div class="mini" style="background-image:${r.p.img?`url(${r.p.img})`:'linear-gradient(135deg,#eee,#ddd)'}"></div>
+        <div class="txt">
+          <div class="t">${hl(escapeHtml(r.p.title||'无标题'), r._kw)} <span class="sub">| ${escapeHtml(r.a.name)}</span></div>
+          <div class="sub">${r._snippet}</div>
+        </div>
+      </div>`).join('');
+    });
+  }
+})();
+
+// 搜索核心（全库）
+function search(q){
+  const kws = parseQuery(q);
+  const res=[];
+  db.albums.forEach(a=>a.pages.forEach(p=>{
+    const hay = {
+      title: p.title||'',
+      note: (p.note || p.rich || ''),
+      tags: (p.tags||[]).join(' '),
+      urls: (p.urls||[]).join(' ')
+    };
+    if(match(hay, kws)){ res.push({a,p,_kw:kws.keyword,_snippet:makeSnippet(hay, kws)}); }
+  }));
+  return res;
+}
+function parseQuery(q){
+  const o={keyword:'', tag:null, url:null, title:null, star:false, phrase:null, not:[]};
+  if(!q) return o;
+  const m=q.match(/"([^"]+)"/); if(m){ o.phrase=m[1]; q=q.replace(m[0],''); }
+  q.split(/\s+/).filter(Boolean).forEach(tok=>{
+    if(/^tag:/.test(tok)) o.tag = tok.slice(4);
+    else if(/^url:/.test(tok)) o.url = tok.slice(4);
+    else if(/^title:/.test(tok)) o.title = tok.slice(6);
+    else if(/^-\w+/.test(tok)) o.not.push(tok.slice(1));
+    else if(tok==='★'||tok==='star:true') o.star=true;
+    else o.keyword += ' '+tok;
+  });
+  o.keyword=o.keyword.trim();
+  return o;
+}
+function match(h, k){
+  if(k.tag && !h.tags.includes(k.tag)) return false;
+  if(k.url && !h.urls.toLowerCase().includes(k.url.toLowerCase())) return false;
+  if(k.title && !h.title.toLowerCase().includes(k.title.toLowerCase())) return false;
+  const pool = (h.title+' '+h.tags+' '+h.urls+' '+h.note).toLowerCase();
+  if(k.phrase && !pool.includes(k.phrase.toLowerCase())) return false;
+  if(k.keyword && !pool.includes(k.keyword.toLowerCase())) return false;
+  for(const n of k.not){ if(pool.includes(n.toLowerCase())) return false; }
+  return true;
+}
+function makeSnippet(h,k){
+  const pool = (h.title+' '+h.tags+' '+h.urls+' '+h.note);
+  const key = k.phrase || k.keyword || k.tag || k.url || k.title;
+  if(!key){ return escapeHtml(h.note.slice(0,80)); }
+  const idx = pool.toLowerCase().indexOf(key.toLowerCase());
+  if(idx<0) return escapeHtml(pool.slice(0,80));
+  const start=Math.max(0, idx-20), end=Math.min(pool.length, idx+20);
+  const seg = pool.slice(start,end);
+  return hl(escapeHtml(seg), key);
+}
+function snippet(p){ 
+  const h={title:p.title||'', tags:(p.tags||[]).join(' '), urls:(p.urls||[]).join(' '), note:(p.note || p.rich || '')};
+  return escapeHtml((h.note||h.title).slice(0,80));
+}
+ function hl(txt, kw){
+  if(!kw) return txt;
+  try{
+    const re=new RegExp('('+kw.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')+')','ig');
+    return txt.replace(re,'<span class="hl">$1</span>');
+  }catch(e){ return txt; }
+}
+function escapeHtml(s){ return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+/* ===== 选择器/文件读取（带压缩） ===== */
+
+// 通用压缩函数：把图片压到最长边不超过 1280 像素，转成 jpeg 再保存
+function compressImage(file, maxSize, cb){
+  const reader = new FileReader();
+  reader.onload = (e) =>{
+    const img = new Image();
+    img.onload = () =>{
+      let w = img.width;
+      let h = img.height;
+      const max = maxSize || 1280;
+
+      if (w > h && w > max){
+        h = Math.round(h * max / w);
+        w = max;
+      } else if (h >= w && h > max){
+        w = Math.round(w * max / h);
+        h = max;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // 👉 分情况调质量：背景图更大一点、质量稍降一点
+      let quality = 0.8;
+      if (max >= 1600) quality = 0.75;
+
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      cb(dataUrl);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// 选一张图（封面 / 背景 会用到）
+function pickImage(cb){
+  const i = document.createElement('input');
+  i.type = 'file';
+  i.accept = 'image/*';
+  i.onchange = (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    // 👉 封面 / 背景专用：最长边 1600，清晰一点
+    compressImage(file, 1600, cb);
+  };
+  i.click();
+}
+// 在 contenteditable 编辑器的光标处插入一张图片
+function insertImageAtCursor(editor, dataUrl){
+  if (!editor) return;
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  img.className = 'inline-img';
+
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) {
+    // 没有选区就直接插到最后
+    editor.appendChild(img);
+    editor.appendChild(document.createElement('br'));
+    return;
+  }
+
+  const range = sel.getRangeAt(0);
+  // 限制插入范围在当前编辑器里
+  if (!editor.contains(range.commonAncestorContainer)) {
+    editor.appendChild(img);
+    editor.appendChild(document.createElement('br'));
+    return;
+  }
+
+  range.deleteContents();
+  range.insertNode(img);
+
+  // 在图片后面加一个换行，方便继续打字
+  const br = document.createElement('br');
+  range.setStartAfter(img);
+  range.collapse(false);
+  range.insertNode(br);
+
+  sel.removeAllRanges();
+  const newRange = document.createRange();
+  newRange.setStartAfter(br);
+  newRange.collapse(true);
+  sel.addRange(newRange);
+}
+
+// 选多张图（导入很多页的时候用）
+function pickImages(cb){
+  const i = document.createElement('input');
+  i.type = 'file';
+  i.accept = 'image/*';
+  i.multiple = true;
+  i.onchange = async (e)=>{
+    const files = Array.from(e.target.files || []);
+    const arr = [];
+    for(const f of files){
+      await new Promise(res=>{
+        compressImage(f, 1280, data=>{
+          arr.push(data);
+          res();
+        });
+      });
+    }
+    cb(arr);
+  };
+  i.click();
+}
+
+// 替换单张图片时也会用到这个（给详情页）
+function readFile(file, cb){
+  compressImage(file, 1280, cb);
+}
+// 把当前页图片保存成文件（下载到本地）
+function downloadDataUrl(dataUrl, filename){
+  if (!dataUrl) {
+    alert('这页还没有图片哦～');
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename || 'moxie-page.jpg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+// ===== 新建 / 编辑 / 删除专辑 弹窗相关 =====
+
+// 打开 “新建专辑” 或 “编辑专辑” 弹窗
+// aid 为空 = 新建；有值 = 编辑这本
+function openNewAlbumDialog(aid) {
+  const dlg      = document.getElementById('dlgNewAlbum');
+  const nameI    = document.getElementById('dlgAlbName');
+  const typeI    = document.getElementById('dlgAlbType');
+  const titleEl  = document.getElementById('dlgAlbTitle');
+  const delBtn   = document.getElementById('dlgDelete');
+
+  if (!dlg) return;
+
+  if (aid) {
+    // 编辑模式
+    currentAlbumEditId = aid;
+    const alb = db.albums.find(a => a.id === aid);
+    if (!alb) return;
+
+    if (titleEl) titleEl.textContent = '编辑专辑';
+    if (nameI)   nameI.value = alb.name || '';
+    if (typeI)   typeI.value = alb.type || '';
+
+    if (delBtn) delBtn.style.display = 'inline-block';
+  } else {
+    // 新建模式
+    currentAlbumEditId = null;
+    if (titleEl) titleEl.textContent = '新建专辑';
+    if (nameI)   nameI.value = '';
+    if (typeI)   typeI.value = '字体专辑';   // 默认给你一个
+
+    if (delBtn) delBtn.style.display = 'none';
+  }
+
+  dlg.style.display = 'flex';
+  if (nameI) setTimeout(() => nameI.focus(), 0);
+}
+function quickAlbType(text){
+  const input = document.getElementById('dlgAlbType');
+  if (input){
+    input.value = text;
+    input.focus();
+  }
+}
+// 卡片上的 ⋯ 按钮：直接打开编辑
+function openEditAlbum(aid){
+  openNewAlbumDialog(aid);
+}
+
+// 点 “取消”
+function onNewAlbumCancel() {
+  const dlg = document.getElementById('dlgNewAlbum');
+  if (dlg) dlg.style.display = 'none';
+  currentAlbumEditId = null;
+}
+
+// 点 “确认”
+function onNewAlbumOk() {
+  const dlg    = document.getElementById('dlgNewAlbum');
+  const nameI  = document.getElementById('dlgAlbName');
+  const typeI  = document.getElementById('dlgAlbType');
+
+  const name = (nameI && nameI.value.trim()) ? nameI.value.trim() : '新专辑';
+  const type = (typeI && typeI.value.trim()) ? typeI.value.trim() : '专辑';
+
+  if (currentAlbumEditId) {
+    // 编辑已有专辑
+    const alb = db.albums.find(a => a.id === currentAlbumEditId);
+    if (alb) {
+      alb.name = name;
+      alb.type = type;
+    }
+  } else {
+    // 新建专辑
+    db.albums.push({
+      id:       id(),
+      name:     name,
+      type:     type,
+      cover:    null,
+      bgGrid:   null,
+      bgDetail: null,
+      pages:    []
+    });
+  }
+
+  autosave();
+  current.view    = 'home';
+  current.albumId = null;
+  currentAlbumEditId = null;
+  render();
+
+  if (dlg) dlg.style.display = 'none';
+}
+
+// 点 “删除专辑”
+function onDeleteAlbum() {
+  if (!currentAlbumEditId) return;
+  const alb = db.albums.find(a => a.id === currentAlbumEditId);
+  if (!alb) return;
+
+  if (!confirm(`确定要删除专辑「${alb.name || ''}」吗？里面的页面也会一起删除哦～`)) return;
+
+  db.albums = db.albums.filter(a => a.id !== currentAlbumEditId);
+  currentAlbumEditId = null;
+
+  autosave();
+  current.view    = 'home';
+  current.albumId = null;
+  render();
+
+  const dlg = document.getElementById('dlgNewAlbum');
+  if (dlg) dlg.style.display = 'none';
+}
+// ===== 备份 / 导入备份 =====
+
+// 导出当前全部数据为 JSON 文件
+function exportBackup(){
+  try{
+    const data = JSON.stringify(db, null, 2);  // 把现在所有专辑+页面打包
+    const blob = new Blob([data], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const date = new Date().toISOString().slice(0,10);
+    a.download = 'moxie_books_backup_' + date + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    alert('✅ 已导出备份文件\n记得放到安全的文件夹里哦～');
+  }catch(e){
+    console.error(e);
+    alert('导出失败了 QAQ');
+  }
+}
+
+// 从 JSON 文件里导入备份
+function importBackup(){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const obj = JSON.parse(ev.target.result);
+        if(!obj || !obj.albums || !Array.isArray(obj.albums)){
+          alert('这个文件不像是有效的 Moxie Books 备份呀…');
+          return;
+        }
+        if(!confirm('确定用这个备份覆盖当前数据吗？\n（当前页面里的内容会被备份里的替换）')){
+          return;
+        }
+        db = obj;
+        save();   // 写回 localStorage
+        current = {view:'home', albumId:null, pageId:null, onlyStar:false, results:null};
+        render();
+        alert('✅ 已成功导入备份！');
+      }catch(err){
+        console.error(err);
+        alert('解析备份失败了，可能文件损坏或不是备份文件…');
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+  input.click();
+}
+// 顶栏小齿轮：展开 / 收起下面那排“搜索 / 收藏 / 主题 / 壁纸”
+function toggleTools(){
+  const bar = document.getElementById('toolsBar');
+  if (!bar) return;
+  bar.style.display =
+    (bar.style.display === 'none' || bar.style.display === '')
+      ? 'block'
+      : 'none';
+}
+
+// 设首页背景：选图并保存
+const btnHomeBg = document.getElementById('btnSetHomeBg');
+if (btnHomeBg) {
+  btnHomeBg.onclick = () => {
+    pickImage(data => {
+      db.meta = db.meta || {};
+      db.meta.bgs = db.meta.bgs || {};
+      db.meta.bgs.home = data;   // 存到首页背景字段
+      save();                    // 保存到 localStorage
+
+      document.body.style.backgroundImage = `url(${data})`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundAttachment = 'fixed';
+      alert("✅ 已设置首页背景！");
+    });
+  };
+}
+// 打开 / 关闭 GitHub 备份面板
+function openGithubPanel() {
+  const mask = document.getElementById('ghPanelMask');
+  if (!mask) return;
+  mask.style.display = 'flex';
+}
+
+function closeGithubPanel() {
+  const mask = document.getElementById('ghPanelMask');
+  if (!mask) return;
+  mask.style.display = 'none';
+}
+
+// 自动备份勾选变化时，顺便存一下配置
+function onGhAutoChange() {
+  if (typeof saveGhConfig === 'function') {
+    saveGhConfig();
+  }
+}
+
+// 频率下拉变化：立刻用新频率重新算
+function onGhIntervalChange() {
+  ghLastBackup = 0; // 换了频率，下次有改动就按新频率
+  if (typeof saveGhConfig === 'function') {
+    saveGhConfig();
+  }
+}
+
+// 把 '10m' / '1h' / '3h' / '1d' 换成毫秒
+function ghIntervalMs(interval) {
+  switch (interval) {
+    case '1h': return 60 * 60 * 1000;
+    case '3h': return 3 * 60 * 60 * 1000;
+    case '1d': return 24 * 60 * 60 * 1000;
+    case '10m':
+    default:   return 10 * 60 * 1000;
+  }
+}
+
+/* ===== GitHub 云备份 ===== */
+
+// 配置存在本地，方便自动带出
+const GH_CFG_KEY = 'moxie_github_cfg_v1';
+let ghAutoTimer = null;
+let ghLastBackup = 0;
+
+// 读设置页里的配置
+function getGhConfig() {
+  const token = (document.getElementById('ghToken')?.value || '').trim();
+  const owner = (document.getElementById('ghOwner')?.value || '').trim();
+  const repo  = (document.getElementById('ghRepo') ?.value || '').trim();
+  const path  = (document.getElementById('ghPath') ?.value || '').trim() || 'moxie-diary.json';
+  const auto  = !!document.getElementById('ghAuto')?.checked;
+  const interval = (document.getElementById('ghInterval')?.value || '10m');
+
+  return { token, owner, repo, path, auto, interval };
+}
+
+// 把配置存到 localStorage，启动时可以恢复
+function saveGhConfig() {
+  const cfg = getGhConfig();
+  try { localStorage.setItem(GH_CFG_KEY, JSON.stringify(cfg)); } catch(e) {}
+}
+
+// 页面启动时把配置恢复到输入框
+function loadGhConfig() {
+  try {
+    const raw = localStorage.getItem(GH_CFG_KEY);
+    if (!raw) return;
+    const cfg = JSON.parse(raw);
+    if (cfg.token && document.getElementById('ghToken')) document.getElementById('ghToken').value = cfg.token;
+    if (cfg.owner && document.getElementById('ghOwner')) document.getElementById('ghOwner').value = cfg.owner;
+    if (cfg.repo  && document.getElementById('ghRepo'))  document.getElementById('ghRepo').value  = cfg.repo;
+    if (cfg.path  && document.getElementById('ghPath'))  document.getElementById('ghPath').value  = cfg.path;
+    if (document.getElementById('ghAuto')) document.getElementById('ghAuto').checked = !!cfg.auto;
+    if (cfg.interval && document.getElementById('ghInterval')) {
+  document.getElementById('ghInterval').value = cfg.interval;
+}
+  } catch(e) {
+    console.warn('GitHub 配置解析失败：', e);
+  }
+}
+
+// GitHub API 需要 base64 文本，处理一下中文
+function toBase64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function fromBase64(b64) {
+  return decodeURIComponent(escape(atob(b64)));
+}
+
+// 打一个总备份对象（可以以后扩）
+function buildBackupObject() {
+  return {
+    version: 1,
+    time: new Date().toISOString(),
+    db,
+    current
+  };
+}
+
+// 手动上传一次（按钮用）
+async function ghUploadBackup(isAuto) {
+  const cfg = getGhConfig();
+  if (!cfg.token || !cfg.owner || !cfg.repo) {
+    if (!isAuto) alert('先在 GitHub 云备份里填好 Token / 仓库 / 文件名~');
+    return;
+  }
+
+  saveGhConfig();
+
+  const url = `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${encodeURIComponent(cfg.path)}`;
+
+  const backup = buildBackupObject();
+  const text   = JSON.stringify(backup);
+  const content = toBase64(text);
+
+  // 先尝试读一下，拿到 sha（更新文件要带 sha）
+  let sha = undefined;
+  try {
+    const r0 = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${cfg.token}` }
+    });
+    if (r0.ok) {
+      const j = await r0.json();
+      sha = j.sha;
+    }
+  } catch (e) {
+    console.warn('读取旧备份失败（没关系）：', e);
+  }
+
+  const body = {
+    message: (isAuto ? '[auto]' : '[manual]') + ' Moxie diary backup ' + new Date().toLocaleString(),
+    content,
+  };
+  if (sha) body.sha = sha;
+
+  const resp = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${cfg.token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    console.error('上传失败：', resp.status, txt);
+    if (!isAuto) alert('GitHub 上传失败：' + resp.status);
+    return;
+  }
+
+  ghLastBackup = Date.now();
+  if (!isAuto) alert('GitHub 备份成功啦～');
+}
+
+// 手动恢复（按钮用）
+async function ghRestoreBackup() {
+  const cfg = getGhConfig();
+  if (!cfg.token || !cfg.owner || !cfg.repo) {
+    alert('先在 GitHub 云备份里填好 Token / 仓库 / 文件名~');
+    return;
+  }
+
+  saveGhConfig();
+
+  const url = `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${encodeURIComponent(cfg.path)}`;
+
+  const resp = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${cfg.token}` }
+  });
+
+  if (!resp.ok) {
+    const txt = await resp.text();
+    console.error('下载失败：', resp.status, txt);
+    alert('GitHub 下载失败：' + resp.status);
+    return;
+  }
+
+  const data = await resp.json();
+  const text = fromBase64(data.content || '');
+  const backup = JSON.parse(text);
+
+  if (!backup || !backup.db) {
+    alert('备份文件内容不对，没找到 db');
+    return;
+  }
+
+  db = backup.db;
+  if (backup.current) current = backup.current;
+
+  autosave();   // 存回本地
+  render();
+  alert('恢复完成啦（已经用 GitHub 备份覆盖本地）');
+}
+
+// 自动备份：基于 autosave 去触发
+function scheduleGhAutoBackup() {
+  const cfg = getGhConfig();
+  if (!cfg.auto) return; // 没开自动备份就直接跳过
+
+  const now = Date.now();
+  const gap = ghIntervalMs(cfg.interval || '10m'); // 用你选的频率
+  if (now - ghLastBackup < gap) return;
+
+  if (ghAutoTimer) return; // 已经约好一次了
+
+  ghAutoTimer = setTimeout(async () => {
+    ghAutoTimer = null;
+    try {
+      await ghUploadBackup(true);
+    } catch (e) {
+      console.warn('自动 GitHub 备份失败：', e);
+    }
+  }, 5000); // 停 5 秒再传，避免你还在狂敲
+}
+
+/* ===== 启动 ===== */
+(async () => {
+  loadGhConfig();
+  const data = await load();
+  if (data) db = data;
+  render();
+})();
+
+</script>
+</div></div></body>
+</html>
